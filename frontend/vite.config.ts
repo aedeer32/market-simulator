@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import globals from 'rollup-plugin-node-globals';
 
 export default defineConfig({
   server: {
@@ -11,7 +12,13 @@ export default defineConfig({
       },
     },
   },
+  plugins: [react()],
   define: {
     global: {},
+  },
+  build: {
+    rollupOptions: {
+      plugins: [globals()],
+    },
   },
 });
