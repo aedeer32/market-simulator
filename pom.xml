@@ -104,6 +104,25 @@
 					</excludes>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>2.43.0</version> <!-- 最新安定版を推奨 -->
+				<configuration>
+					<java>
+						<!-- Google Java Format を使用 -->
+						<googleJavaFormat />
+					</java>
+				</configuration>
+				<executions>
+					<!-- mvn verify 時に自動チェック -->
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
