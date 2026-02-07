@@ -45,6 +45,10 @@ const MarketDashboard: React.FC = () => {
   const [newAgentCash, setNewAgentCash] = useState("0");
   const [addError, setAddError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [fundingInput, setFundingInput] = useState("");
+  const [dividendInput, setDividendInput] = useState("");
+  const [rateError, setRateError] = useState<string | null>(null);
+  const [isUpdatingRates, setIsUpdatingRates] = useState(false);
   const maxHistoryPoints = 120;
 
   const chartMeta = useMemo(() => {
@@ -153,6 +157,56 @@ const MarketDashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!snapshot?.config) return;
+    setFundingInput(snapshot.config.fundingRate.toString());
+    setDividendInput(snapshot.config.dividendRate.toString());
+  }, [snapshot?.config?.fundingRate, snapshot?.config?.dividendRate]);
+
+  const submitRates = async () => {
+    const fundingRate = fundingInput === "" ? null : Number(fundingInput);
+    const dividendRate = dividendInput === "" ? null : Number(dividendInput);
+    if (
+      (fundingRate !== null && (Number.isNaN(fundingRate) || fundingRate < 0)) ||
+      (dividendRate !== null && (Number.isNaN(dividendRate) || dividendRate < 0))
+    ) {
+      setRateError("Rates must be non-negative numbers.");
+      return;
+    }
+    setRateError(null);
+    setIsUpdatingRates(true);
+    try {
+      const res = await fetch("/api/config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fundingRate,
+          dividendRate,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to update rates");
+      }
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : "Failed to update rates");
+    } finally {
+      setIsUpdatingRates(false);
+    }
+  };
+
+  const callControl = async (path: string, label: string) => {
+    try {
+      const res = await fetch(`/api/config/${path}`, { method: "PATCH" });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `Failed to ${label}`);
+      }
+    } catch (err) {
+      setRateError(err instanceof Error ? err.message : `Failed to ${label}`);
+    }
+  };
+
+  useEffect(() => {
     console.log("🔄 MarketDashboard mounted");
 
     const socket = new SockJS("/ws-market");
@@ -219,8 +273,8 @@ const MarketDashboard: React.FC = () => {
             boxShadow: "inset -1px 0 0 #e2e6ee",
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>
-            Simulation Config
+          <div style={{ fontSize: 14, color: "#333", fontWeight: 700, marginBottom: 8 }}>
+            Simulation Configuration
           </div>
           <div style={{ fontSize: 13, color: "#333" }}>
             <div>
@@ -233,18 +287,109 @@ const MarketDashboard: React.FC = () => {
                 ? formatNumber(snapshot.config.currentTotalCash)
                 : "N/A"}
             </div>
-            <div>
-              Funding Rate:{" "}
-              {snapshot.config
-                ? (snapshot.config.fundingRate * 100).toFixed(2) + "%"
-                : "N/A"}
-            </div>
-            <div>
-              Dividend Rate:{" "}
-              {snapshot.config
-                ? (snapshot.config.dividendRate * 100).toFixed(2) + "%"
-                : "N/A"}
-            </div>
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 14,
+              color: "#333",
+              fontWeight: 700,
+            }}
+          >
+            Market Configuration
+          </div>
+          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ fontSize: 12 }}>
+              Funding Rate
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={fundingInput}
+                onChange={(e) => setFundingInput(e.target.value)}
+                style={{ marginLeft: 6, width: "100%" }}
+              />
+            </label>
+            <label style={{ fontSize: 12 }}>
+              Dividend Rate
+              <input
+                type="number"
+                min="0"
+                step="0.001"
+                value={dividendInput}
+                onChange={(e) => setDividendInput(e.target.value)}
+                style={{ marginLeft: 6, width: "100%" }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={submitRates}
+              disabled={isUpdatingRates}
+              style={{
+                marginTop: 4,
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #c9cdd6",
+                background: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              {isUpdatingRates ? "Updating..." : "Update Rates"}
+            </button>
+            {rateError && (
+              <div style={{ color: "#b00020", fontSize: 12 }}>{rateError}</div>
+            )}
+          </div>
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 14,
+              color: "#333",
+              fontWeight: 700,
+            }}
+          >
+            Simulation Controls
+          </div>
+          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => callControl("pause", "pause")}
+              style={{
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #c9cdd6",
+                background: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              Pause
+            </button>
+            <button
+              type="button"
+              onClick={() => callControl("resume", "resume")}
+              style={{
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #c9cdd6",
+                background: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              Resume
+            </button>
+            <button
+              type="button"
+              onClick={() => callControl("reset", "reset")}
+              style={{
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #c9cdd6",
+                background: "#fff5f5",
+                cursor: "pointer",
+              }}
+            >
+              Reset
+            </button>
           </div>
           <div
             style={{

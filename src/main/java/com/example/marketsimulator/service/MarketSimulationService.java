@@ -29,10 +29,11 @@ public class MarketSimulationService {
 	private final double totalAssetUnits;
 	private double totalCash;
 	private final Map<String, Double> initialPositions;
-	private final double fundingRate;
-	private final double dividendRate;
+	private volatile double fundingRate;
+	private volatile double dividendRate;
 	private int mmCounter = 1;
 	private int rtCounter = 1;
+	private volatile boolean paused = false;
 	
 	public MarketSimulationService(
 	        SimpMessagingTemplate messagingTemplate,
@@ -49,11 +50,9 @@ public class MarketSimulationService {
 		this.fundingRate = fundingRate;
 		this.dividendRate = dividendRate;
 		agents.add(new MarketMaker("MM1", 2.0));
-		agents.add(new MarketMaker("MM2", 2.0));
 		agents.add(new RandomTrader("RT1"));
-		agents.add(new RandomTrader("RT2"));
-		mmCounter = 3;
-		rtCounter = 3;
+		mmCounter = 2;
+		rtCounter = 2;
 		double initialCashPerAgent = totalCash / agents.size();
 		for (Agent agent : agents) {
 			positions.put(agent.getName(), this.initialPositions.getOrDefault(agent.getName(), 0.0));
@@ -64,6 +63,9 @@ public class MarketSimulationService {
 	
 	@Scheduled(fixedRate = 1000)
 	public void runMarketTick() {
+		if (paused) {
+			return;
+		}
 		MarketSnapshot snapshot;
 		synchronized (this) {
 			List<Order> allOrders = new ArrayList<>();
@@ -241,24 +243,26 @@ public class MarketSimulationService {
 	}
 
 	private void applyFundingRate() {
-		if (fundingRate <= 0.0) {
+		double rate = fundingRate;
+		if (rate <= 0.0) {
 			return;
 		}
 		for (Map.Entry<String, Double> entry : cashBalances.entrySet()) {
 			double initialCash = initialCashBalances.getOrDefault(entry.getKey(), 0.0);
-			double updated = entry.getValue() - (initialCash * fundingRate);
+			double updated = entry.getValue() - (initialCash * rate);
 			entry.setValue(updated);
 		}
 	}
 
 	private void applyDividendRate() {
-		if (dividendRate <= 0.0) {
+		double rate = dividendRate;
+		if (rate <= 0.0) {
 			return;
 		}
 		double price = market.getPrice();
 		for (Map.Entry<String, Double> entry : cashBalances.entrySet()) {
 			double positionUnits = positions.getOrDefault(entry.getKey(), 0.0);
-			double updated = entry.getValue() + (positionUnits * price * dividendRate);
+			double updated = entry.getValue() + (positionUnits * price * rate);
 			entry.setValue(updated);
 		}
 	}
@@ -300,6 +304,49 @@ public class MarketSimulationService {
 		initialCashBalances.put(resolvedName, initialCash);
 		totalCash += initialCash;
 		return resolvedName;
+	}
+
+	public synchronized void updateRates(Double newFundingRate, Double newDividendRate) {
+		if (newFundingRate != null) {
+			if (newFundingRate < 0.0) {
+				throw new IllegalArgumentException("fundingRate must be >= 0");
+			}
+			fundingRate = newFundingRate;
+		}
+		if (newDividendRate != null) {
+			if (newDividendRate < 0.0) {
+				throw new IllegalArgumentException("dividendRate must be >= 0");
+			}
+			dividendRate = newDividendRate;
+		}
+	}
+
+	public void pause() {
+		paused = true;
+	}
+
+	public void resume() {
+		paused = false;
+	}
+
+	public synchronized void reset() {
+		agents.clear();
+		positions.clear();
+		cashBalances.clear();
+		initialCashBalances.clear();
+		mmCounter = 1;
+		rtCounter = 1;
+		agents.add(new MarketMaker("MM1", 2.0));
+		agents.add(new RandomTrader("RT1"));
+		mmCounter = 2;
+		rtCounter = 2;
+		double initialCashPerAgent = totalCash / agents.size();
+		for (Agent agent : agents) {
+			positions.put(agent.getName(), initialPositions.getOrDefault(agent.getName(), 0.0));
+			cashBalances.put(agent.getName(), initialCashPerAgent);
+			initialCashBalances.put(agent.getName(), initialCashPerAgent);
+		}
+		market.updatePrice(100.0);
 	}
 	
 	private static class MutableOrder {
