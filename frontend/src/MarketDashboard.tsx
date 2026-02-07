@@ -138,17 +138,16 @@ const MarketDashboard: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: '100vh' }}>
       {snapshot && (
         <aside
           style={{
             flex: '0 0 260px',
             minWidth: 240,
-            border: '1px solid #d6d6d6',
-            borderRadius: 8,
-            padding: 12,
-            background: '#f8f9fb',
-            height: 'fit-content',
+            borderRight: '1px solid #d6d6d6',
+            padding: '16px 12px',
+            background: '#eef1f6',
+            boxShadow: 'inset -1px 0 0 #e2e6ee',
           }}
         >
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Simulation Config</div>
@@ -168,7 +167,7 @@ const MarketDashboard: React.FC = () => {
           </ul>
         </aside>
       )}
-      <div style={{ flex: '1 1 auto', minWidth: 320 }}>
+      <div style={{ flex: '1 1 auto', minWidth: 320, padding: '0 16px 16px 16px' }}>
         <div style={{ margin: '0 0 20px 0' }}>
           <h2 style={{ margin: '0 0 6px 70px' }}>
             📊 Market Price: {snapshot ? snapshot.price.toFixed(2) : 'Loading...'}
