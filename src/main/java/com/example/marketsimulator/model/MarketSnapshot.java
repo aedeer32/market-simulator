@@ -14,10 +14,14 @@ public class MarketSnapshot {
 	public static class AgentState {
 		public String name;
 		public List<Order> lastOrders;
+		public double positionUnits;
+		public double cashBalance;
 		
-		public AgentState(String name, List<Order> lastOrders) {
+		public AgentState(String name, List<Order> lastOrders, double positionUnits, double cashBalance) {
 			this.name = name;
 			this.lastOrders = lastOrders;
+			this.positionUnits = positionUnits;
+			this.cashBalance = cashBalance;
 		}
 	}
 }

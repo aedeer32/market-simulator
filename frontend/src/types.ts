@@ -8,6 +8,8 @@ export interface Order {
 export interface AgentState {
   name: string;
   lastOrders: Order[];
+  positionUnits: number;
+  cashBalance: number;
 }
 
 export interface MarketSnapshot {

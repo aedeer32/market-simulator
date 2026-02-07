@@ -5,12 +5,15 @@ import { Client } from '@stomp/stompjs';
 interface Order {
   agentName: string;
   price: number;
+  quantity: number;
   type: 'BUY' | 'SELL';
 }
 
 interface Agent {
   name: string;
   lastOrders: Order[];
+  positionUnits: number;
+  cashBalance: number;
 }
 
 interface MarketSnapshot {
@@ -21,6 +24,7 @@ interface MarketSnapshot {
 const MarketDashboard: React.FC = () => {
   const [snapshot, setSnapshot] = useState<MarketSnapshot | null>(null);
   const [priceHistory, setPriceHistory] = useState<Array<{ price: number; time: number }>>([]);
+  const [agentHistory, setAgentHistory] = useState<Record<string, Array<{ time: number; position: number; value: number }>>>({});
   const maxHistoryPoints = 120;
 
   const chartMeta = useMemo(() => {
@@ -62,6 +66,22 @@ const MarketDashboard: React.FC = () => {
 
   const estimateTextWidth = (text: string, fontSize: number) => text.length * fontSize * 0.6;
 
+  const buildSparklinePath = (values: number[], w: number, h: number) => {
+    if (values.length === 0) return '';
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const padding = Math.max((max - min) * 0.1, 1);
+    const minY = min - padding;
+    const maxY = max + padding;
+    const xStep = w / Math.max(values.length - 1, 1);
+    const points = values.map((v, idx) => {
+      const x = idx * xStep;
+      const y = h - ((v - minY) / (maxY - minY)) * h;
+      return `${x},${y}`;
+    });
+    return `M ${points.join(' L ')}`;
+  };
+
   useEffect(() => {
     console.log("🔄 MarketDashboard mounted");
 
@@ -80,6 +100,20 @@ const MarketDashboard: React.FC = () => {
             const next = [...prev, { price: parsed.price, time: Date.now() }];
             if (next.length > maxHistoryPoints) {
               next.splice(0, next.length - maxHistoryPoints);
+            }
+            return next;
+          });
+          setAgentHistory((prev) => {
+            const next = { ...prev };
+            const now = Date.now();
+            for (const agent of parsed.agents) {
+              const totalValue = agent.cashBalance + agent.positionUnits * parsed.price;
+              const history = next[agent.name] ? [...next[agent.name]] : [];
+              history.push({ time: now, position: agent.positionUnits, value: totalValue });
+              if (history.length > maxHistoryPoints) {
+                history.splice(0, history.length - maxHistoryPoints);
+              }
+              next[agent.name] = history;
             }
             return next;
           });
@@ -198,10 +232,48 @@ const MarketDashboard: React.FC = () => {
       {snapshot?.agents.map((agent) => (
         <div key={agent.name}>
           <h3>{agent.name}</h3>
+          <div>
+            Holdings: {agent.positionUnits.toFixed(2)} units | Cash: {agent.cashBalance.toFixed(2)} | Total Value:{' '}
+            {(agent.cashBalance + agent.positionUnits * snapshot.price).toFixed(2)}
+          </div>
+          <div style={{ display: 'flex', gap: 12, margin: '8px 0 12px 0', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>Holdings Trend</div>
+              <svg viewBox="0 0 200 60" width="200" height="60" role="img" aria-label="Holdings trend">
+                <rect x="0" y="0" width="200" height="60" fill="#ffffff" stroke="#d6d6d6" strokeWidth="1" rx="4" />
+                <path
+                  d={buildSparklinePath(
+                    (agentHistory[agent.name] || []).map((p) => p.position),
+                    200,
+                    60,
+                  )}
+                  fill="none"
+                  stroke="#2ca02c"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>Total Value Trend</div>
+              <svg viewBox="0 0 200 60" width="200" height="60" role="img" aria-label="Total value trend">
+                <rect x="0" y="0" width="200" height="60" fill="#ffffff" stroke="#d6d6d6" strokeWidth="1" rx="4" />
+                <path
+                  d={buildSparklinePath(
+                    (agentHistory[agent.name] || []).map((p) => p.value),
+                    200,
+                    60,
+                  )}
+                  fill="none"
+                  stroke="#ff7f0e"
+                  strokeWidth="2"
+                />
+              </svg>
+            </div>
+          </div>
           <ul>
             {agent.lastOrders.map((order, idx) => (
               <li key={idx}>
-                {order.type} @ {order.price.toFixed(2)}
+                {order.type} {order.quantity} @ {order.price.toFixed(2)}
               </li>
             ))}
           </ul>
