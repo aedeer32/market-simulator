@@ -10,6 +10,7 @@ export interface AgentState {
   lastOrders: Order[];
   positionUnits: number;
   cashBalance: number;
+  initialCash: number;
 }
 
 export interface MarketSnapshot {
@@ -18,6 +19,10 @@ export interface MarketSnapshot {
   config?: {
     totalAssetUnits: number;
     totalCash: number;
+    fundingRate: number;
+    dividendRate: number;
+    currentTotalAssets: number;
+    currentTotalCash: number;
     initialPositions: Record<string, number>;
   };
 }

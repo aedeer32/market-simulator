@@ -14,6 +14,7 @@ interface Agent {
   lastOrders: Order[];
   positionUnits: number;
   cashBalance: number;
+  initialCash: number;
 }
 
 interface MarketSnapshot {
@@ -22,6 +23,10 @@ interface MarketSnapshot {
   config?: {
     totalAssetUnits: number;
     totalCash: number;
+    fundingRate: number;
+    dividendRate: number;
+    currentTotalAssets: number;
+    currentTotalCash: number;
     initialPositions: Record<string, number>;
   };
 }
@@ -35,6 +40,11 @@ const MarketDashboard: React.FC = () => {
     Record<string, Array<{ time: number; position: number; value: number }>>
   >({});
   const [collapsed, setCollapsed] = useState({ mm: false, rt: false });
+  const [newAgentType, setNewAgentType] = useState<"MM" | "RT">("MM");
+  const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentCash, setNewAgentCash] = useState("0");
+  const [addError, setAddError] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const maxHistoryPoints = 120;
 
   const chartMeta = useMemo(() => {
@@ -106,6 +116,40 @@ const MarketDashboard: React.FC = () => {
       return `${x},${y}`;
     });
     return `M ${points.join(" L ")}`;
+  };
+
+  const formatNumber = (value: number) =>
+    value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const submitNewAgent = async () => {
+    const cash = Number(newAgentCash);
+    if (Number.isNaN(cash) || cash < 0) {
+      setAddError("Cash must be a non-negative number.");
+      return;
+    }
+    setAddError(null);
+    setIsAdding(true);
+    try {
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: newAgentType,
+          name: newAgentName.trim() === "" ? undefined : newAgentName.trim(),
+          cash,
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Failed to add agent");
+      }
+      setNewAgentName("");
+      setNewAgentCash("0");
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to add agent");
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   useEffect(() => {
@@ -181,28 +225,95 @@ const MarketDashboard: React.FC = () => {
           <div style={{ fontSize: 13, color: "#333" }}>
             <div>
               Total Assets:{" "}
-              {snapshot.config?.totalAssetUnits.toFixed(2) ?? "N/A"}
+              {snapshot.config?.currentTotalAssets.toFixed(2) ?? "N/A"}
             </div>
             <div>
-              Total Cash: {snapshot.config?.totalCash.toFixed(2) ?? "N/A"}
+              Total Cash:{" "}
+              {snapshot.config
+                ? formatNumber(snapshot.config.currentTotalCash)
+                : "N/A"}
+            </div>
+            <div>
+              Funding Rate:{" "}
+              {snapshot.config
+                ? (snapshot.config.fundingRate * 100).toFixed(2) + "%"
+                : "N/A"}
+            </div>
+            <div>
+              Dividend Rate:{" "}
+              {snapshot.config
+                ? (snapshot.config.dividendRate * 100).toFixed(2) + "%"
+                : "N/A"}
             </div>
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: "#555" }}>
-            Initial Positions
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 14,
+              color: "#333",
+              fontWeight: 700,
+            }}
+          >
+            Add Agent
           </div>
-          <ul style={{ margin: "6px 0 0 0", paddingLeft: 16, fontSize: 12 }}>
-            {snapshot.config?.initialPositions ? (
-              Object.entries(snapshot.config.initialPositions).map(
-                ([name, value]) => (
-                  <li key={name}>
-                    {name}: {value.toFixed(2)}
-                  </li>
-                ),
-              )
-            ) : (
-              <li>N/A</li>
+          <div
+            style={{
+              marginTop: 6,
+              display: "flex",
+              flexDirection: "column",
+              gap: 6,
+            }}
+          >
+            <label style={{ fontSize: 12 }}>
+              Type
+              <select
+                value={newAgentType}
+                onChange={(e) => setNewAgentType(e.target.value as "MM" | "RT")}
+                style={{ marginLeft: 6 }}
+              >
+                <option value="MM">Market Maker</option>
+                <option value="RT">Random Trader</option>
+              </select>
+            </label>
+            <label style={{ fontSize: 12 }}>
+              Name (optional)
+              <input
+                type="text"
+                value={newAgentName}
+                onChange={(e) => setNewAgentName(e.target.value)}
+                style={{ marginLeft: 6, width: "100%" }}
+                placeholder="auto"
+              />
+            </label>
+            <label style={{ fontSize: 12 }}>
+              Initial Cash
+              <input
+                type="number"
+                min="0"
+                value={newAgentCash}
+                onChange={(e) => setNewAgentCash(e.target.value)}
+                style={{ marginLeft: 6, width: "100%" }}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={submitNewAgent}
+              disabled={isAdding}
+              style={{
+                marginTop: 4,
+                padding: "6px 8px",
+                borderRadius: 6,
+                border: "1px solid #c9cdd6",
+                background: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              {isAdding ? "Adding..." : "Add Agent"}
+            </button>
+            {addError && (
+              <div style={{ color: "#b00020", fontSize: 12 }}>{addError}</div>
             )}
-          </ul>
+          </div>
         </aside>
       )}
       <div
@@ -355,22 +466,32 @@ const MarketDashboard: React.FC = () => {
                 style={{
                   border: "1px solid #d6d6d6",
                   borderRadius: 8,
-                  padding: 12,
+                  padding: 10,
                   background: "#ffffff",
-                  minWidth: 260,
-                  flex: "1 1 280px",
+                  minWidth: 208,
+                  flex: "1 1 224px",
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                  {agent.name}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 8,
+                    marginBottom: 3,
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>{agent.name}</div>
+                  <div style={{ fontSize: 12, color: "#555" }}>
+                    Initial Cash: {formatNumber(agent.initialCash)}
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: "#333", paddingLeft: 6 }}>
-                  Holdings: {agent.positionUnits.toFixed(2)} | Cash:{" "}
-                  {agent.cashBalance.toFixed(2)} | Total:{" "}
-                  {(
+                <div style={{ fontSize: 12, color: "#333", paddingLeft: 6 }}>
+                  Holdings: {formatNumber(agent.positionUnits)} | Cash:{" "}
+                  {formatNumber(agent.cashBalance)} | Total:{" "}
+                  {formatNumber(
                     agent.cashBalance +
-                    agent.positionUnits * snapshot.price
-                  ).toFixed(2)}
+                      agent.positionUnits * snapshot.price,
+                  )}
                 </div>
                 {agent.name.startsWith("MM") ? (
                   (() => {
@@ -382,9 +503,9 @@ const MarketDashboard: React.FC = () => {
                       return (
                         <ul
                           style={{
-                            margin: "6px 0 8px 0",
+                            margin: "4px 0 6px 0",
                             paddingLeft: 18,
-                            fontSize: 13,
+                            fontSize: 12,
                             color: "#333",
                             listStyle: "none",
                           }}
@@ -401,41 +522,43 @@ const MarketDashboard: React.FC = () => {
                     return (
                       <div
                         style={{
-                          margin: "6px 0 8px 0",
-                          fontSize: 13,
+                          margin: "4px 0 6px 0",
+                          fontSize: 12,
                           color: "#333",
                           paddingLeft: 18,
                         }}
                       >
-                        {buy.quantity} @ {buy.price.toFixed(2)} /{" "}
-                        {sell.quantity} @ {sell.price.toFixed(2)}
+                        Markets: {formatNumber(buy.quantity)} @{" "}
+                        {formatNumber(buy.price)} / {formatNumber(sell.quantity)} @{" "}
+                        {formatNumber(sell.price)}
                       </div>
                     );
                   })()
                 ) : (
                   <ul
                     style={{
-                      margin: "6px 0 8px 0",
+                      margin: "4px 0 6px 0",
                       paddingLeft: 18,
-                      fontSize: 13,
+                      fontSize: 12,
                       color: "#333",
                       listStyle: "none",
                     }}
                   >
                     {agent.lastOrders.map((order, idx) => (
                       <li key={idx}>
-                        {order.type} {order.quantity} @ {order.price.toFixed(2)}
+                        Trades: {order.type} {formatNumber(order.quantity)} @{" "}
+                        {formatNumber(order.price)}
                       </li>
                     ))}
                   </ul>
                 )}
-                <div style={{ marginTop: 6 }}>
-                  <div style={{ fontSize: 11, color: "#555", marginBottom: 4 }}>
+                <div style={{ marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}>
                     Total Value Trend
                   </div>
                   <svg
-                    viewBox="0 0 180 50"
-                    width="180"
+                    viewBox="0 0 280 50"
+                    width="280"
                     height="50"
                     role="img"
                     aria-label="Total value trend"
@@ -443,7 +566,7 @@ const MarketDashboard: React.FC = () => {
                     <rect
                       x="0"
                       y="0"
-                      width="180"
+                      width="280"
                       height="50"
                       fill="#ffffff"
                       stroke="#d6d6d6"
@@ -453,7 +576,7 @@ const MarketDashboard: React.FC = () => {
                     <path
                       d={buildSparklinePath(
                         (agentHistory[agent.name] || []).map((p) => p.value),
-                        180,
+                        280,
                         50,
                       )}
                       fill="none"
@@ -493,7 +616,7 @@ const MarketDashboard: React.FC = () => {
                     {collapsed.mm ? "▶" : "▼"} Market Makers
                   </button>
                   {!collapsed.mm && (
-                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {mmAgents.map(renderAgent)}
                     </div>
                   )}
@@ -518,7 +641,7 @@ const MarketDashboard: React.FC = () => {
                     {collapsed.rt ? "▶" : "▼"} Random Traders
                   </button>
                   {!collapsed.rt && (
-                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {rtAgents.map(renderAgent)}
                     </div>
                   )}
