@@ -4,8 +4,8 @@ import com.example.marketsimulator.model.Market;
 import com.example.marketsimulator.model.Order;
 import java.util.List;
 
-public abstract class MarketMaker extends Agent {
-	public MarketMaker(String name) {
+public abstract class Trader extends Agent {
+	public Trader(String name) {
 		super(name);
 	}
 	

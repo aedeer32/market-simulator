@@ -1,7 +1,7 @@
 package com.example.marketsimulator.service;
 
 import com.example.marketsimulator.agent.Agent;
-import com.example.marketsimulator.agent.MarketMaker;
+import com.example.marketsimulator.agent.NaiveMarketMaker;
 import com.example.marketsimulator.agent.RandomTrader;
 import com.example.marketsimulator.model.Market;
 import com.example.marketsimulator.model.MarketSnapshot;
@@ -49,11 +49,11 @@ public class MarketSimulationService {
 		this.initialPositions = parseInitialPositions(initialPositions);
 		this.fundingRate = fundingRate;
 		this.dividendRate = dividendRate;
-		agents.add(new MarketMaker("MM1", 2.0));
+		agents.add(new NaiveMarketMaker("NMM1", 2.0));
 		agents.add(new RandomTrader("RT1"));
 		mmCounter = 2;
 		rtCounter = 2;
-		double initialCashPerAgent = totalCash / agents.size();
+		double initialCashPerAgent = 100.0;
 		for (Agent agent : agents) {
 			positions.put(agent.getName(), this.initialPositions.getOrDefault(agent.getName(), 0.0));
 			cashBalances.put(agent.getName(), initialCashPerAgent);
@@ -96,7 +96,7 @@ public class MarketSimulationService {
 			if (!bankruptCandidates.isEmpty()) {
 				Map<String, Double> mmBids = new HashMap<>();
 				for (Order order : allOrders) {
-					if (order.type == Order.Type.BUY && order.agentName.startsWith("MM")) {
+					if (order.type == Order.Type.BUY && isMarketMakerName(order.agentName)) {
 						mmBids.merge(order.agentName, order.price, Math::max);
 					}
 				}
@@ -203,7 +203,7 @@ public class MarketSimulationService {
 	private void liquidateBankruptAgents(List<Agent> bankruptCandidates, Map<String, Double> mmBids) {
 		List<Agent> marketMakers = new ArrayList<>();
 		for (Agent agent : agents) {
-			if (agent.getName().startsWith("MM")) {
+			if (isMarketMakerName(agent.getName())) {
 				marketMakers.add(agent);
 			}
 		}
@@ -248,9 +248,11 @@ public class MarketSimulationService {
 			return;
 		}
 		for (Map.Entry<String, Double> entry : cashBalances.entrySet()) {
-			double initialCash = initialCashBalances.getOrDefault(entry.getKey(), 0.0);
-			double updated = entry.getValue() - (initialCash * rate);
-			entry.setValue(updated);
+			double cash = entry.getValue();
+			if (cash < 0.0) {
+				double updated = cash * (1.0 + rate);
+				entry.setValue(updated);
+			}
 		}
 	}
 
@@ -284,10 +286,10 @@ public class MarketSimulationService {
 		String resolvedName = (name == null) ? "" : name.trim();
 		if (resolvedName.isEmpty() || existingNames.contains(resolvedName)) {
 			if (isMm) {
-				while (existingNames.contains("MM" + mmCounter)) {
+				while (existingNames.contains("NMM" + mmCounter)) {
 					mmCounter++;
 				}
-				resolvedName = "MM" + mmCounter;
+				resolvedName = "NMM" + mmCounter;
 				mmCounter++;
 			} else {
 				while (existingNames.contains("RT" + rtCounter)) {
@@ -297,13 +299,17 @@ public class MarketSimulationService {
 				rtCounter++;
 			}
 		}
-		Agent newAgent = isMm ? new MarketMaker(resolvedName, 2.0) : new RandomTrader(resolvedName);
+		Agent newAgent = isMm ? new NaiveMarketMaker(resolvedName, 2.0) : new RandomTrader(resolvedName);
 		agents.add(newAgent);
 		positions.put(resolvedName, 0.0);
 		cashBalances.put(resolvedName, initialCash);
 		initialCashBalances.put(resolvedName, initialCash);
 		totalCash += initialCash;
 		return resolvedName;
+	}
+
+	private boolean isMarketMakerName(String name) {
+		return name != null && name.startsWith("NMM");
 	}
 
 	public synchronized void updateRates(Double newFundingRate, Double newDividendRate) {
@@ -336,11 +342,11 @@ public class MarketSimulationService {
 		initialCashBalances.clear();
 		mmCounter = 1;
 		rtCounter = 1;
-		agents.add(new MarketMaker("MM1", 2.0));
+		agents.add(new NaiveMarketMaker("NMM1", 2.0));
 		agents.add(new RandomTrader("RT1"));
 		mmCounter = 2;
 		rtCounter = 2;
-		double initialCashPerAgent = totalCash / agents.size();
+		double initialCashPerAgent = 100.0;
 		for (Agent agent : agents) {
 			positions.put(agent.getName(), initialPositions.getOrDefault(agent.getName(), 0.0));
 			cashBalances.put(agent.getName(), initialCashPerAgent);
@@ -413,7 +419,7 @@ public class MarketSimulationService {
 	//    public void simulate() {
 	//        CompletableFuture.runAsync(
 	//            () -> {
-	//                List<Agent> agents = List.of(new MarketMaker());
+	//                List<Agent> agents = List.of(new NaiveMarketMaker("MM1", 2.0));
 	//
 	//                for (Agent agent : agents) {
 	//                    List<Order> orders = agent.decideAction(market);

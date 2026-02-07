@@ -42,7 +42,7 @@ const MarketDashboard: React.FC = () => {
   const [collapsed, setCollapsed] = useState({ mm: false, rt: false });
   const [newAgentType, setNewAgentType] = useState<"MM" | "RT">("MM");
   const [newAgentName, setNewAgentName] = useState("");
-  const [newAgentCash, setNewAgentCash] = useState("0");
+  const [newAgentCash, setNewAgentCash] = useState("100");
   const [addError, setAddError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [fundingInput, setFundingInput] = useState("");
@@ -148,7 +148,7 @@ const MarketDashboard: React.FC = () => {
         throw new Error(text || "Failed to add agent");
       }
       setNewAgentName("");
-      setNewAgentCash("0");
+      setNewAgentCash("100");
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Failed to add agent");
     } finally {
@@ -416,7 +416,7 @@ const MarketDashboard: React.FC = () => {
                 onChange={(e) => setNewAgentType(e.target.value as "MM" | "RT")}
                 style={{ marginLeft: 6 }}
               >
-                <option value="MM">Market Maker</option>
+                <option value="MM">Naive Market Maker</option>
                 <option value="RT">Random Trader</option>
               </select>
             </label>
@@ -599,8 +599,9 @@ const MarketDashboard: React.FC = () => {
         </div>
         {snapshot &&
           (() => {
+            const isMarketMakerName = (name: string) => name.startsWith("NMM");
             const mmAgents = snapshot.agents.filter((a) =>
-              a.name.startsWith("MM"),
+              isMarketMakerName(a.name),
             );
             const rtAgents = snapshot.agents.filter((a) =>
               a.name.startsWith("RT"),
@@ -638,7 +639,7 @@ const MarketDashboard: React.FC = () => {
                       agent.positionUnits * snapshot.price,
                   )}
                 </div>
-                {agent.name.startsWith("MM") ? (
+                {isMarketMakerName(agent.name) ? (
                   (() => {
                     const buy = agent.lastOrders.find((o) => o.type === "BUY");
                     const sell = agent.lastOrders.find(
@@ -783,7 +784,7 @@ const MarketDashboard: React.FC = () => {
                     }}
                     aria-expanded={!collapsed.rt}
                   >
-                    {collapsed.rt ? "▶" : "▼"} Random Traders
+                    {collapsed.rt ? "▶" : "▼"} Traders
                   </button>
                   {!collapsed.rt && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

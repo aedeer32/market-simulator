@@ -5,7 +5,7 @@ import com.example.marketsimulator.model.Order;
 import java.util.List;
 import java.util.Random;
 
-public class RandomTrader extends Agent {
+public class RandomTrader extends Trader {
 	private final Random random = new Random();
 	
 	public RandomTrader(String name) {
