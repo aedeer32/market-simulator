@@ -15,4 +15,9 @@ export interface AgentState {
 export interface MarketSnapshot {
   price: number;
   agents: AgentState[];
+  config?: {
+    totalAssetUnits: number;
+    totalCash: number;
+    initialPositions: Record<string, number>;
+  };
 }

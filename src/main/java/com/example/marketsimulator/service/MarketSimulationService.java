@@ -20,7 +20,12 @@ public class MarketSimulationService {
 	
 	private final SimpMessagingTemplate messagingTemplate;
 	private final Market market = new Market();
-	private final List<Agent> agents = List.of(new MarketMaker("MM1", 2.0), new RandomTrader("RT1"));
+	private final List<Agent> agents = List.of(
+	        new MarketMaker("MM1", 2.0),
+	        new MarketMaker("MM2", 2.0),
+	        new RandomTrader("RT1"),
+	        new RandomTrader("RT2")
+	);
 	private final Map<String, Double> positions = new HashMap<>();
 	private final Map<String, Double> cashBalances = new HashMap<>();
 	private final double totalAssetUnits;
@@ -66,7 +71,12 @@ public class MarketSimulationService {
 			agentStates.add(new MarketSnapshot.AgentState(agent.getName(), orders, positionUnits, cashBalance));
 		}
 		
-		MarketSnapshot snapshot = new MarketSnapshot(market.getPrice(), agentStates);
+		MarketSnapshot.MarketConfig config = new MarketSnapshot.MarketConfig(
+		        totalAssetUnits,
+		        totalCash,
+		        new HashMap<>(initialPositions)
+		);
+		MarketSnapshot snapshot = new MarketSnapshot(market.getPrice(), agentStates, config);
 		messagingTemplate.convertAndSend("/topic/market", snapshot);
 	}
 
