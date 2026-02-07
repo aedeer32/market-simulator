@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
+import React, { useEffect, useMemo, useState } from "react";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
 
 interface Order {
   agentName: string;
   price: number;
   quantity: number;
-  type: 'BUY' | 'SELL';
+  type: "BUY" | "SELL";
 }
 
 interface Agent {
@@ -28,8 +28,12 @@ interface MarketSnapshot {
 
 const MarketDashboard: React.FC = () => {
   const [snapshot, setSnapshot] = useState<MarketSnapshot | null>(null);
-  const [priceHistory, setPriceHistory] = useState<Array<{ price: number; time: number }>>([]);
-  const [agentHistory, setAgentHistory] = useState<Record<string, Array<{ time: number; position: number; value: number }>>>({});
+  const [priceHistory, setPriceHistory] = useState<
+    Array<{ price: number; time: number }>
+  >([]);
+  const [agentHistory, setAgentHistory] = useState<
+    Record<string, Array<{ time: number; position: number; value: number }>>
+  >({});
   const [collapsed, setCollapsed] = useState({ mm: false, rt: false });
   const maxHistoryPoints = 120;
 
@@ -46,11 +50,20 @@ const MarketDashboard: React.FC = () => {
     const end = times[times.length - 1];
     const mid = start + (end - start) / 2;
     const padding = Math.max((max - min) * 0.1, 1);
-    return { min, max, last, start, mid, end, minY: min - padding, maxY: max + padding };
+    return {
+      min,
+      max,
+      last,
+      start,
+      mid,
+      end,
+      minY: min - padding,
+      maxY: max + padding,
+    };
   }, [priceHistory]);
 
   const pricePath = useMemo(() => {
-    if (priceHistory.length === 0 || !chartMeta) return '';
+    if (priceHistory.length === 0 || !chartMeta) return "";
     const w = 1000;
     const h = 240;
     const margin = { left: 70, right: 20, top: 20, bottom: 35 };
@@ -61,19 +74,26 @@ const MarketDashboard: React.FC = () => {
       const x = margin.left + idx * xStep;
       const y =
         margin.top +
-        (1 - (price.price - chartMeta.minY) / (chartMeta.maxY - chartMeta.minY)) * plotH;
+        (1 -
+          (price.price - chartMeta.minY) / (chartMeta.maxY - chartMeta.minY)) *
+          plotH;
       return `${x},${y}`;
     });
-    return `M ${points.join(' L ')}`;
+    return `M ${points.join(" L ")}`;
   }, [priceHistory, chartMeta]);
 
   const formatTime = (ms: number) =>
-    new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    new Date(ms).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
 
-  const estimateTextWidth = (text: string, fontSize: number) => text.length * fontSize * 0.6;
+  const estimateTextWidth = (text: string, fontSize: number) =>
+    text.length * fontSize * 0.6;
 
   const buildSparklinePath = (values: number[], w: number, h: number) => {
-    if (values.length === 0) return '';
+    if (values.length === 0) return "";
     const min = Math.min(...values);
     const max = Math.max(...values);
     const padding = Math.max((max - min) * 0.1, 1);
@@ -85,20 +105,20 @@ const MarketDashboard: React.FC = () => {
       const y = h - ((v - minY) / (maxY - minY)) * h;
       return `${x},${y}`;
     });
-    return `M ${points.join(' L ')}`;
+    return `M ${points.join(" L ")}`;
   };
 
   useEffect(() => {
     console.log("🔄 MarketDashboard mounted");
 
-    const socket = new SockJS('/ws-market');
+    const socket = new SockJS("/ws-market");
     const client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
-      debug: (str) => console.log('[STOMP]', str),
+      debug: (str) => console.log("[STOMP]", str),
       onConnect: () => {
         console.log("✅ STOMP connected");
-        client.subscribe('/topic/market', (msg) => {
+        client.subscribe("/topic/market", (msg) => {
           console.log("📩 Received:", msg.body);
           const parsed = JSON.parse(msg.body) as MarketSnapshot;
           setSnapshot(parsed);
@@ -113,9 +133,14 @@ const MarketDashboard: React.FC = () => {
             const next = { ...prev };
             const now = Date.now();
             for (const agent of parsed.agents) {
-              const totalValue = agent.cashBalance + agent.positionUnits * parsed.price;
+              const totalValue =
+                agent.cashBalance + agent.positionUnits * parsed.price;
               const history = next[agent.name] ? [...next[agent.name]] : [];
-              history.push({ time: now, position: agent.positionUnits, value: totalValue });
+              history.push({
+                time: now,
+                position: agent.positionUnits,
+                value: totalValue,
+              });
               if (history.length > maxHistoryPoints) {
                 history.splice(0, history.length - maxHistoryPoints);
               }
@@ -138,41 +163,59 @@ const MarketDashboard: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: '100vh' }}>
+    <div style={{ display: "flex", alignItems: "stretch", minHeight: "100vh" }}>
       {snapshot && (
         <aside
           style={{
-            flex: '0 0 260px',
+            flex: "0 0 260px",
             minWidth: 240,
-            borderRight: '1px solid #d6d6d6',
-            padding: '16px 12px',
-            background: '#eef1f6',
-            boxShadow: 'inset -1px 0 0 #e2e6ee',
+            borderRight: "1px solid #d6d6d6",
+            padding: "16px 12px",
+            background: "#eef1f6",
+            boxShadow: "inset -1px 0 0 #e2e6ee",
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Simulation Config</div>
-          <div style={{ fontSize: 13, color: '#333' }}>
-            <div>Total Assets: {snapshot.config?.totalAssetUnits.toFixed(2) ?? 'N/A'}</div>
-            <div>Total Cash: {snapshot.config?.totalCash.toFixed(2) ?? 'N/A'}</div>
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>
+            Simulation Config
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: '#555' }}>Initial Positions</div>
-          <ul style={{ margin: '6px 0 0 0', paddingLeft: 16, fontSize: 12 }}>
-            {snapshot.config?.initialPositions
-              ? Object.entries(snapshot.config.initialPositions).map(([name, value]) => (
+          <div style={{ fontSize: 13, color: "#333" }}>
+            <div>
+              Total Assets:{" "}
+              {snapshot.config?.totalAssetUnits.toFixed(2) ?? "N/A"}
+            </div>
+            <div>
+              Total Cash: {snapshot.config?.totalCash.toFixed(2) ?? "N/A"}
+            </div>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: "#555" }}>
+            Initial Positions
+          </div>
+          <ul style={{ margin: "6px 0 0 0", paddingLeft: 16, fontSize: 12 }}>
+            {snapshot.config?.initialPositions ? (
+              Object.entries(snapshot.config.initialPositions).map(
+                ([name, value]) => (
                   <li key={name}>
                     {name}: {value.toFixed(2)}
                   </li>
-                ))
-              : <li>N/A</li>}
+                ),
+              )
+            ) : (
+              <li>N/A</li>
+            )}
           </ul>
         </aside>
       )}
-      <div style={{ flex: '1 1 auto', minWidth: 320, padding: '0 16px 16px 16px' }}>
-        <div style={{ margin: '0 0 20px 0' }}>
-          <h2 style={{ margin: '0 0 6px 70px' }}>
-            📊 Market Price: {snapshot ? snapshot.price.toFixed(2) : 'Loading...'}
+      <div
+        style={{ flex: "1 1 auto", minWidth: 320, padding: "0 16px 16px 16px" }}
+      >
+        <div style={{ margin: "0 0 20px 0" }}>
+          <h2 style={{ margin: "0 0 6px 70px" }}>
+            📊 Market Price:{" "}
+            {snapshot ? snapshot.price.toFixed(2) : "Loading..."}
           </h2>
-          <div style={{ fontWeight: 600, margin: '0 0 6px 70px' }}>Price Trend</div>
+          <div style={{ fontWeight: 600, margin: "0 0 6px 70px" }}>
+            Price Trend
+          </div>
           {priceHistory.length === 0 || !chartMeta ? (
             <div>Loading price history...</div>
           ) : (
@@ -217,7 +260,14 @@ const MarketDashboard: React.FC = () => {
                 }
                 return (
                   <>
-                    <rect x="0" y="0" width={w} height={h} fill="#f7f8fb" rx="6" />
+                    <rect
+                      x="0"
+                      y="0"
+                      width={w}
+                      height={h}
+                      fill="#f7f8fb"
+                      rx="6"
+                    />
                     <rect
                       x={margin.left}
                       y={margin.top}
@@ -230,14 +280,35 @@ const MarketDashboard: React.FC = () => {
                     <g stroke="#e6e6e6" strokeWidth="1">
                       {Array.from({ length: hLines + 1 }).map((_, i) => {
                         const y = margin.top + (plotH / hLines) * i;
-                        return <line key={`h-${i}`} x1={margin.left} y1={y} x2={w - margin.right} y2={y} />;
+                        return (
+                          <line
+                            key={`h-${i}`}
+                            x1={margin.left}
+                            y1={y}
+                            x2={w - margin.right}
+                            y2={y}
+                          />
+                        );
                       })}
                       {Array.from({ length: vLines + 1 }).map((_, i) => {
                         const x = margin.left + (plotW / vLines) * i;
-                        return <line key={`v-${i}`} x1={x} y1={margin.top} x2={x} y2={h - margin.bottom} />;
+                        return (
+                          <line
+                            key={`v-${i}`}
+                            x1={x}
+                            y1={margin.top}
+                            x2={x}
+                            y2={h - margin.bottom}
+                          />
+                        );
                       })}
                     </g>
-                    <path d={pricePath} fill="none" stroke="#1f77b4" strokeWidth="3" />
+                    <path
+                      d={pricePath}
+                      fill="none"
+                      stroke="#1f77b4"
+                      strokeWidth="3"
+                    />
                     <g fill="#444" fontSize="18" fontFamily="sans-serif">
                       <text x="6" y={margin.top + 6}>
                         {chartMeta.max.toFixed(2)}
@@ -249,7 +320,11 @@ const MarketDashboard: React.FC = () => {
                         {chartMeta.last.toFixed(2)}
                       </text>
                     </g>
-                    <g fill="#444" fontSize={timeFontSize} fontFamily="sans-serif">
+                    <g
+                      fill="#444"
+                      fontSize={timeFontSize}
+                      fontFamily="sans-serif"
+                    >
                       <text x={xStart} y={h - 8}>
                         {timeStart}
                       </text>
@@ -266,120 +341,191 @@ const MarketDashboard: React.FC = () => {
             </svg>
           )}
         </div>
-        {snapshot && (() => {
-        const mmAgents = snapshot.agents.filter((a) => a.name.startsWith('MM'));
-        const rtAgents = snapshot.agents.filter((a) => a.name.startsWith('RT'));
-        const renderAgent = (agent: Agent) => (
-          <div
-            key={agent.name}
-            style={{
-              border: '1px solid #d6d6d6',
-              borderRadius: 8,
-              padding: 12,
-              background: '#ffffff',
-              minWidth: 260,
-              flex: '1 1 280px',
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>{agent.name}</div>
-            <div style={{ fontSize: 13, color: '#333' }}>
-              Holdings: {agent.positionUnits.toFixed(2)} | Cash: {agent.cashBalance.toFixed(2)} | Total:{' '}
-              {(agent.cashBalance + agent.positionUnits * snapshot.price).toFixed(2)}
-            </div>
-            <div style={{ display: 'flex', gap: 10, margin: '8px 0 10px 0', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Holdings</div>
-                <svg viewBox="0 0 180 50" width="180" height="50" role="img" aria-label="Holdings trend">
-                  <rect x="0" y="0" width="180" height="50" fill="#ffffff" stroke="#d6d6d6" strokeWidth="1" rx="4" />
-                  <path
-                    d={buildSparklinePath(
-                      (agentHistory[agent.name] || []).map((p) => p.position),
-                      180,
-                      50,
-                    )}
-                    fill="none"
-                    stroke="#2ca02c"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#555', marginBottom: 4 }}>Total Value</div>
-                <svg viewBox="0 0 180 50" width="180" height="50" role="img" aria-label="Total value trend">
-                  <rect x="0" y="0" width="180" height="50" fill="#ffffff" stroke="#d6d6d6" strokeWidth="1" rx="4" />
-                  <path
-                    d={buildSparklinePath(
-                      (agentHistory[agent.name] || []).map((p) => p.value),
-                      180,
-                      50,
-                    )}
-                    fill="none"
-                    stroke="#ff7f0e"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 13, color: '#333' }}>
-              {agent.lastOrders.map((order, idx) => (
-                <li key={idx}>
-                  {order.type} {order.quantity} @ {order.price.toFixed(2)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-        return (
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div style={{ flex: '1 1 360px', minWidth: 300 }}>
-              <button
-                type="button"
-                onClick={() => setCollapsed((prev) => ({ ...prev, mm: !prev.mm }))}
+        {snapshot &&
+          (() => {
+            const mmAgents = snapshot.agents.filter((a) =>
+              a.name.startsWith("MM"),
+            );
+            const rtAgents = snapshot.agents.filter((a) =>
+              a.name.startsWith("RT"),
+            );
+            const renderAgent = (agent: Agent) => (
+              <div
+                key={agent.name}
                 style={{
-                  fontWeight: 700,
-                  marginBottom: 8,
-                  background: '#f1f3f6',
-                  border: '1px solid #d6d6d6',
-                  borderRadius: 6,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
+                  border: "1px solid #d6d6d6",
+                  borderRadius: 8,
+                  padding: 12,
+                  background: "#ffffff",
+                  minWidth: 260,
+                  flex: "1 1 280px",
                 }}
-                aria-expanded={!collapsed.mm}
               >
-                {collapsed.mm ? '▶' : '▼'} Market Makers
-              </button>
-              {!collapsed.mm && (
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  {mmAgents.map(renderAgent)}
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  {agent.name}
                 </div>
-              )}
-            </div>
-            <div style={{ flex: '1 1 360px', minWidth: 300 }}>
-              <button
-                type="button"
-                onClick={() => setCollapsed((prev) => ({ ...prev, rt: !prev.rt }))}
+                <div style={{ fontSize: 13, color: "#333", paddingLeft: 6 }}>
+                  Holdings: {agent.positionUnits.toFixed(2)} | Cash:{" "}
+                  {agent.cashBalance.toFixed(2)} | Total:{" "}
+                  {(
+                    agent.cashBalance +
+                    agent.positionUnits * snapshot.price
+                  ).toFixed(2)}
+                </div>
+                {agent.name.startsWith("MM") ? (
+                  (() => {
+                    const buy = agent.lastOrders.find((o) => o.type === "BUY");
+                    const sell = agent.lastOrders.find(
+                      (o) => o.type === "SELL",
+                    );
+                    if (!buy || !sell) {
+                      return (
+                        <ul
+                          style={{
+                            margin: "6px 0 8px 0",
+                            paddingLeft: 18,
+                            fontSize: 13,
+                            color: "#333",
+                            listStyle: "none",
+                          }}
+                        >
+                          {agent.lastOrders.map((order, idx) => (
+                            <li key={idx}>
+                              {order.type} {order.quantity} @{" "}
+                              {order.price.toFixed(2)}
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    }
+                    return (
+                      <div
+                        style={{
+                          margin: "6px 0 8px 0",
+                          fontSize: 13,
+                          color: "#333",
+                          paddingLeft: 18,
+                        }}
+                      >
+                        {buy.quantity} @ {buy.price.toFixed(2)} /{" "}
+                        {sell.quantity} @ {sell.price.toFixed(2)}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <ul
+                    style={{
+                      margin: "6px 0 8px 0",
+                      paddingLeft: 18,
+                      fontSize: 13,
+                      color: "#333",
+                      listStyle: "none",
+                    }}
+                  >
+                    {agent.lastOrders.map((order, idx) => (
+                      <li key={idx}>
+                        {order.type} {order.quantity} @ {order.price.toFixed(2)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontSize: 11, color: "#555", marginBottom: 4 }}>
+                    Total Value Trend
+                  </div>
+                  <svg
+                    viewBox="0 0 180 50"
+                    width="180"
+                    height="50"
+                    role="img"
+                    aria-label="Total value trend"
+                  >
+                    <rect
+                      x="0"
+                      y="0"
+                      width="180"
+                      height="50"
+                      fill="#ffffff"
+                      stroke="#d6d6d6"
+                      strokeWidth="1"
+                      rx="4"
+                    />
+                    <path
+                      d={buildSparklinePath(
+                        (agentHistory[agent.name] || []).map((p) => p.value),
+                        180,
+                        50,
+                      )}
+                      fill="none"
+                      stroke="#ff7f0e"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </div>
+              </div>
+            );
+            return (
+              <div
                 style={{
-                  fontWeight: 700,
-                  marginBottom: 8,
-                  background: '#f1f3f6',
-                  border: '1px solid #d6d6d6',
-                  borderRadius: 6,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
+                  display: "flex",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  alignItems: "flex-start",
                 }}
-                aria-expanded={!collapsed.rt}
               >
-                {collapsed.rt ? '▶' : '▼'} Random Traders
-              </button>
-              {!collapsed.rt && (
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  {rtAgents.map(renderAgent)}
+                <div style={{ flex: "1 1 360px", minWidth: 300 }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsed((prev) => ({ ...prev, mm: !prev.mm }))
+                    }
+                    style={{
+                      fontWeight: 700,
+                      marginBottom: 8,
+                      background: "#f1f3f6",
+                      border: "1px solid #d6d6d6",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                    }}
+                    aria-expanded={!collapsed.mm}
+                  >
+                    {collapsed.mm ? "▶" : "▼"} Market Makers
+                  </button>
+                  {!collapsed.mm && (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      {mmAgents.map(renderAgent)}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
+                <div style={{ flex: "1 1 360px", minWidth: 300 }}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCollapsed((prev) => ({ ...prev, rt: !prev.rt }))
+                    }
+                    style={{
+                      fontWeight: 700,
+                      marginBottom: 8,
+                      background: "#f1f3f6",
+                      border: "1px solid #d6d6d6",
+                      borderRadius: 6,
+                      padding: "6px 10px",
+                      cursor: "pointer",
+                    }}
+                    aria-expanded={!collapsed.rt}
+                  >
+                    {collapsed.rt ? "▶" : "▼"} Random Traders
+                  </button>
+                  {!collapsed.rt && (
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      {rtAgents.map(renderAgent)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
       </div>
     </div>
   );
