@@ -9,17 +9,17 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 public class MarketController {
-
-  private final SimpMessagingTemplate messagingTemplate;
-  private final Market market = new Market();
-
-  public MarketController(SimpMessagingTemplate messagingTemplate) {
-    this.messagingTemplate = messagingTemplate;
-  }
-
-  @MessageMapping("/order")
-  public void receiveOrders(List<Order> orders) {
-    market.applyOrders(orders);
-    messagingTemplate.convertAndSend("/topic/market", market);
-  }
+	
+	private final SimpMessagingTemplate messagingTemplate;
+	private final Market market = new Market();
+	
+	public MarketController(SimpMessagingTemplate messagingTemplate) {
+		this.messagingTemplate = messagingTemplate;
+	}
+	
+	@MessageMapping("/order")
+	public void receiveOrders(List<Order> orders) {
+		market.applyOrders(orders);
+		messagingTemplate.convertAndSend("/topic/market", market);
+	}
 }

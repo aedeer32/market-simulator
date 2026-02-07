@@ -110,8 +110,9 @@
 				<version>2.43.0</version> <!-- 最新安定版を推奨 -->
 				<configuration>
 					<java>
-						<!-- Google Java Format を使用 -->
-						<googleJavaFormat />
+						<eclipse>
+							<file>${project.basedir}/config/formatter/eclipse-java-formatter.xml</file>
+						</eclipse>
 					</java>
 				</configuration>
 				<executions>

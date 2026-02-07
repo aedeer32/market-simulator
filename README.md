@@ -8,15 +8,13 @@ A real-time market simulation application built with **React (Vite)** frontend a
 
 ```
 market-simulator/
-├── backend/                            # Spring Boot application
-│   ├── src/main/java/com/example/marketsimulator
-│   │   ├── controller/                 # WebSocket endpoints
-│   │   ├── config/                     # WebSocket & Security configuration
-│   │   ├── model/                      # Market and Order models
-│   │   ├── service/                    # Market processing logic
-│   └── application.properties
+├── src/main/java/com/example/marketsimulator
+│   ├── controller/                 # WebSocket endpoints
+│   ├── config/                     # WebSocket & Security configuration
+│   ├── model/                      # Market and Order models
+│   ├── service/                    # Market processing logic
 │
-└── frontend/                           # React frontend (Vite)
+└── frontend/                       # React frontend (Vite)
     ├── src/
     │   ├── App.tsx
     │   ├── MarketDashboard.tsx
@@ -24,6 +22,7 @@ market-simulator/
     │   ├── index.css
     ├── index.html
     └── vite.config.ts
+
 ```
 
 ---
@@ -41,7 +40,6 @@ market-simulator/
 ## 🛠 Backend Setup (Spring Boot)
 
 ```bash
-cd backend
 ./mvnw spring-boot:run
 ```
 

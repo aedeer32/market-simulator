@@ -5,7 +5,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 class MarketSimulatorApplicationTests {
-
-  @Test
-  void contextLoads() {}
+	
+	@Test
+	void contextLoads() {
+	}
 }

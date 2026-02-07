@@ -13,32 +13,22 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig {
-
-  @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(
-            auth ->
-                auth.requestMatchers("/ws-market/**", "/app/**", "/topic/**")
-                    .permitAll()
-                    .anyRequest()
-                    .permitAll())
-        .cors(Customizer.withDefaults())
-        .csrf(AbstractHttpConfigurer::disable); // 必須：WebSocketではCSRFを無効化
-
-    return http.build();
-  }
-
-  @Bean
-  public WebMvcConfigurer corsConfigurer() {
-    return new WebMvcConfigurer() {
-      @Override
-      public void addCorsMappings(CorsRegistry registry) {
-        registry
-            .addMapping("/**")
-            .allowedOrigins("http://localhost:5173") // ✅ Vite の URL
-            .allowedMethods("*")
-            .allowCredentials(true);
-      }
-    };
-  }
+	
+	@Bean
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http.authorizeHttpRequests(
+		        auth -> auth.requestMatchers("/ws-market/**", "/app/**", "/topic/**").permitAll().anyRequest().permitAll()).cors(Customizer.withDefaults()).csrf(AbstractHttpConfigurer::disable); // 必須：WebSocketではCSRFを無効化
+		
+		return http.build();
+	}
+	
+	@Bean
+	public WebMvcConfigurer corsConfigurer() {
+		return new WebMvcConfigurer() {
+			@Override
+			public void addCorsMappings(CorsRegistry registry) {
+				registry.addMapping("/**").allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173").allowedMethods("*").allowCredentials(true);
+			}
+		};
+	}
 }
