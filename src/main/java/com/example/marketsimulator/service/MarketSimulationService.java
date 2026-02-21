@@ -1,6 +1,8 @@
 package com.example.marketsimulator.service;
 
 import com.example.marketsimulator.agent.Agent;
+import com.example.marketsimulator.agent.MeanReversionTrader;
+import com.example.marketsimulator.agent.MomentumTrader;
 import com.example.marketsimulator.agent.NaiveMarketMaker;
 import com.example.marketsimulator.agent.RandomTrader;
 import com.example.marketsimulator.model.Market;
@@ -33,6 +35,8 @@ public class MarketSimulationService {
 	private volatile double dividendRate;
 	private int mmCounter = 1;
 	private int rtCounter = 1;
+	private int mtCounter = 1;
+	private int mrCounter = 1;
 	private volatile boolean paused = false;
 	
 	public MarketSimulationService(
@@ -53,6 +57,8 @@ public class MarketSimulationService {
 		agents.add(new RandomTrader("RT1"));
 		mmCounter = 2;
 		rtCounter = 2;
+		mtCounter = 1;
+		mrCounter = 1;
 		double initialCashPerAgent = 100.0;
 		for (Agent agent : agents) {
 			positions.put(agent.getName(), this.initialPositions.getOrDefault(agent.getName(), 0.0));
@@ -169,6 +175,9 @@ public class MarketSimulationService {
 			double sellerPosition = positions.getOrDefault(sell.agentName, 0.0);
 			double buyerCash = cashBalances.getOrDefault(buy.agentName, 0.0);
 			double maxByCash = tradePrice > 0.0 ? buyerCash / tradePrice : 0.0;
+			if (buy.agentName.startsWith("RT")) {
+				maxByCash = buy.remaining;
+			}
 			
 			double tradable = Math.min(Math.min(buy.remaining, sell.remaining), Math.min(sellerPosition, maxByCash));
 			if (tradable <= 0.0) {
@@ -269,15 +278,18 @@ public class MarketSimulationService {
 		}
 	}
 
-	public synchronized String addAgent(String type, String name, double initialCash) {
-		if (initialCash < 0.0) {
-			throw new IllegalArgumentException("initialCash must be >= 0");
-		}
+	public synchronized String addAgent(String type, String name, Double initialCashIgnored) {
 		String normalizedType = type == null ? "" : type.trim().toUpperCase();
-		boolean isMm = "MM".equals(normalizedType) || "MARKET_MAKER".equals(normalizedType);
+		boolean isMm =
+		        "MM".equals(normalizedType) ||
+		        "NMM".equals(normalizedType) ||
+		        "MARKET_MAKER".equals(normalizedType) ||
+		        "NAIVE_MARKET_MAKER".equals(normalizedType);
 		boolean isRt = "RT".equals(normalizedType) || "RANDOM_TRADER".equals(normalizedType);
-		if (!isMm && !isRt) {
-			throw new IllegalArgumentException("type must be MM or RT");
+		boolean isMt = "MT".equals(normalizedType) || "MOMENTUM_TRADER".equals(normalizedType);
+		boolean isMr = "MR".equals(normalizedType) || "MEAN_REVERSION_TRADER".equals(normalizedType);
+		if (!isMm && !isRt && !isMt && !isMr) {
+			throw new IllegalArgumentException("type must be NMM, RT, MT, or MR");
 		}
 		Set<String> existingNames = new HashSet<>();
 		for (Agent agent : agents) {
@@ -291,17 +303,39 @@ public class MarketSimulationService {
 				}
 				resolvedName = "NMM" + mmCounter;
 				mmCounter++;
-			} else {
+			} else if (isRt) {
 				while (existingNames.contains("RT" + rtCounter)) {
 					rtCounter++;
 				}
 				resolvedName = "RT" + rtCounter;
 				rtCounter++;
+			} else if (isMt) {
+				while (existingNames.contains("MT" + mtCounter)) {
+					mtCounter++;
+				}
+				resolvedName = "MT" + mtCounter;
+				mtCounter++;
+			} else {
+				while (existingNames.contains("MR" + mrCounter)) {
+					mrCounter++;
+				}
+				resolvedName = "MR" + mrCounter;
+				mrCounter++;
 			}
 		}
-		Agent newAgent = isMm ? new NaiveMarketMaker(resolvedName, 2.0) : new RandomTrader(resolvedName);
+		Agent newAgent;
+		if (isMm) {
+			newAgent = new NaiveMarketMaker(resolvedName, 2.0);
+		} else if (isRt) {
+			newAgent = new RandomTrader(resolvedName);
+		} else if (isMt) {
+			newAgent = new MomentumTrader(resolvedName);
+		} else {
+			newAgent = new MeanReversionTrader(resolvedName);
+		}
 		agents.add(newAgent);
 		positions.put(resolvedName, 0.0);
+		double initialCash = isMm ? -5000.0 : 5000.0;
 		cashBalances.put(resolvedName, initialCash);
 		initialCashBalances.put(resolvedName, initialCash);
 		totalCash += initialCash;

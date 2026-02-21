@@ -19,11 +19,11 @@ public class AgentController {
 	
 	@PostMapping
 	public AddAgentResponse addAgent(@RequestBody AddAgentRequest request) {
-		if (request == null || request.cash == null) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cash is required");
+		if (request == null) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "request is required");
 		}
 		try {
-			String name = marketSimulationService.addAgent(request.type, request.name, request.cash);
+			String name = marketSimulationService.addAgent(request.type, request.name, null);
 			return new AddAgentResponse(name);
 		} catch (IllegalArgumentException ex) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
@@ -33,7 +33,6 @@ public class AgentController {
 	public static class AddAgentRequest {
 		public String type;
 		public String name;
-		public Double cash;
 	}
 	
 	public static class AddAgentResponse {

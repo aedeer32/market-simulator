@@ -40,7 +40,9 @@ const MarketDashboard: React.FC = () => {
     Record<string, Array<{ time: number; position: number; value: number }>>
   >({});
   const [collapsed, setCollapsed] = useState({ mm: false, rt: false });
-  const [newAgentType, setNewAgentType] = useState<"MM" | "RT">("MM");
+  const [newAgentType, setNewAgentType] = useState<"NMM" | "RT" | "MT" | "MR">(
+    "NMM",
+  );
   const [newAgentName, setNewAgentName] = useState("");
   const [newAgentCash, setNewAgentCash] = useState("100");
   const [addError, setAddError] = useState<string | null>(null);
@@ -413,11 +415,15 @@ const MarketDashboard: React.FC = () => {
               Type
               <select
                 value={newAgentType}
-                onChange={(e) => setNewAgentType(e.target.value as "MM" | "RT")}
+                onChange={(e) =>
+                  setNewAgentType(e.target.value as "NMM" | "RT" | "MT" | "MR")
+                }
                 style={{ marginLeft: 6 }}
               >
-                <option value="MM">Naive Market Maker</option>
+                <option value="NMM">Naive Market Maker</option>
                 <option value="RT">Random Trader</option>
+                <option value="MT">Momentum Trader</option>
+                <option value="MR">Mean Reversion Trader</option>
               </select>
             </label>
             <label style={{ fontSize: 12 }}>
@@ -603,8 +609,10 @@ const MarketDashboard: React.FC = () => {
             const mmAgents = snapshot.agents.filter((a) =>
               isMarketMakerName(a.name),
             );
+            const isTraderName = (name: string) =>
+              name.startsWith("RT") || name.startsWith("MT") || name.startsWith("MR");
             const rtAgents = snapshot.agents.filter((a) =>
-              a.name.startsWith("RT"),
+              isTraderName(a.name),
             );
             const renderAgent = (agent: Agent) => (
               <div
