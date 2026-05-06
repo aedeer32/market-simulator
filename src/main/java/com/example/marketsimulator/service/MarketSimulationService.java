@@ -40,12 +40,7 @@ public class MarketSimulationService {
 	private volatile boolean paused = false;
 	
 	public MarketSimulationService(
-	        SimpMessagingTemplate messagingTemplate,
-	        @Value("${market.total-asset-units:100}") double totalAssetUnits,
-	        @Value("${market.total-cash:10000}") double totalCash,
-	        @Value("${market.initial-positions:MM1:100,RT1:0}") String initialPositions,
-	        @Value("${market.funding-rate:0.01}") double fundingRate,
-	        @Value("${market.dividend-rate:0.02}") double dividendRate
+	                               SimpMessagingTemplate messagingTemplate, @Value("${market.total-asset-units:100}") double totalAssetUnits, @Value("${market.total-cash:10000}") double totalCash, @Value("${market.initial-positions:MM1:100,RT1:0}") String initialPositions, @Value("${market.funding-rate:0.01}") double fundingRate, @Value("${market.dividend-rate:0.02}") double dividendRate
 	) {
 		this.messagingTemplate = messagingTemplate;
 		this.totalAssetUnits = totalAssetUnits;
@@ -89,7 +84,7 @@ public class MarketSimulationService {
 			if (!Double.isNaN(lastTradePrice)) {
 				market.updatePrice(lastTradePrice);
 			}
-
+			
 			List<Agent> bankruptCandidates = new ArrayList<>();
 			for (Agent agent : agents) {
 				double positionUnits = positions.getOrDefault(agent.getName(), 0.0);
@@ -134,33 +129,19 @@ public class MarketSimulationService {
 			double currentTotalCash = cashBalances.values().stream().mapToDouble(Double::doubleValue).sum();
 			double currentTotalAssets = positions.values().stream().mapToDouble(Double::doubleValue).sum();
 			MarketSnapshot.MarketConfig config = new MarketSnapshot.MarketConfig(
-			        totalAssetUnits,
-			        totalCash,
-			        fundingRate,
-			        dividendRate,
-			        currentTotalAssets,
-			        currentTotalCash,
-			        new HashMap<>(initialPositions)
+			        totalAssetUnits, totalCash, fundingRate, dividendRate, currentTotalAssets, currentTotalCash, new HashMap<>(initialPositions)
 			);
 			snapshot = new MarketSnapshot(market.getPrice(), agentStates, config);
 		}
 		messagingTemplate.convertAndSend("/topic/market", snapshot);
 	}
-
+	
 	private double matchAndSettle(List<Order> orders) {
 		if (orders.isEmpty()) {
 			return Double.NaN;
 		}
-		List<MutableOrder> buys = orders.stream()
-		        .filter(o -> o.type == Order.Type.BUY)
-		        .map(MutableOrder::new)
-		        .sorted((a, b) -> Double.compare(b.price, a.price))
-		        .toList();
-		List<MutableOrder> sells = orders.stream()
-		        .filter(o -> o.type == Order.Type.SELL)
-		        .map(MutableOrder::new)
-		        .sorted((a, b) -> Double.compare(a.price, b.price))
-		        .toList();
+		List<MutableOrder> buys = orders.stream().filter(o -> o.type == Order.Type.BUY).map(MutableOrder::new).sorted((a, b) -> Double.compare(b.price, a.price)).toList();
+		List<MutableOrder> sells = orders.stream().filter(o -> o.type == Order.Type.SELL).map(MutableOrder::new).sorted((a, b) -> Double.compare(a.price, b.price)).toList();
 		
 		int bi = 0;
 		int si = 0;
@@ -208,7 +189,7 @@ public class MarketSimulationService {
 		}
 		return lastTradePrice;
 	}
-
+	
 	private void liquidateBankruptAgents(List<Agent> bankruptCandidates, Map<String, Double> mmBids) {
 		List<Agent> marketMakers = new ArrayList<>();
 		for (Agent agent : agents) {
@@ -250,7 +231,7 @@ public class MarketSimulationService {
 			}
 		}
 	}
-
+	
 	private void applyFundingRate() {
 		double rate = fundingRate;
 		if (rate <= 0.0) {
@@ -264,7 +245,7 @@ public class MarketSimulationService {
 			}
 		}
 	}
-
+	
 	private void applyDividendRate() {
 		double rate = dividendRate;
 		if (rate <= 0.0) {
@@ -277,14 +258,10 @@ public class MarketSimulationService {
 			entry.setValue(updated);
 		}
 	}
-
+	
 	public synchronized String addAgent(String type, String name, Double initialCashIgnored) {
 		String normalizedType = type == null ? "" : type.trim().toUpperCase();
-		boolean isMm =
-		        "MM".equals(normalizedType) ||
-		        "NMM".equals(normalizedType) ||
-		        "MARKET_MAKER".equals(normalizedType) ||
-		        "NAIVE_MARKET_MAKER".equals(normalizedType);
+		boolean isMm = "MM".equals(normalizedType) || "NMM".equals(normalizedType) || "MARKET_MAKER".equals(normalizedType) || "NAIVE_MARKET_MAKER".equals(normalizedType);
 		boolean isRt = "RT".equals(normalizedType) || "RANDOM_TRADER".equals(normalizedType);
 		boolean isMt = "MT".equals(normalizedType) || "MOMENTUM_TRADER".equals(normalizedType);
 		boolean isMr = "MR".equals(normalizedType) || "MEAN_REVERSION_TRADER".equals(normalizedType);
@@ -341,11 +318,11 @@ public class MarketSimulationService {
 		totalCash += initialCash;
 		return resolvedName;
 	}
-
+	
 	private boolean isMarketMakerName(String name) {
 		return name != null && name.startsWith("NMM");
 	}
-
+	
 	public synchronized void updateRates(Double newFundingRate, Double newDividendRate) {
 		if (newFundingRate != null) {
 			if (newFundingRate < 0.0) {
@@ -360,15 +337,15 @@ public class MarketSimulationService {
 			dividendRate = newDividendRate;
 		}
 	}
-
+	
 	public void pause() {
 		paused = true;
 	}
-
+	
 	public void resume() {
 		paused = false;
 	}
-
+	
 	public synchronized void reset() {
 		agents.clear();
 		positions.clear();
@@ -400,7 +377,7 @@ public class MarketSimulationService {
 			this.remaining = order.quantity;
 		}
 	}
-
+	
 	private Map<String, Double> parseInitialPositions(String raw) {
 		Map<String, Double> parsed = new HashMap<>();
 		if (raw != null && !raw.isBlank()) {

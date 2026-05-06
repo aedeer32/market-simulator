@@ -18,7 +18,7 @@ public class Market {
 			this.price = (buyMax + sellMin) / 2.0;
 		}
 	}
-
+	
 	public void updatePrice(double price) {
 		this.price = price;
 	}

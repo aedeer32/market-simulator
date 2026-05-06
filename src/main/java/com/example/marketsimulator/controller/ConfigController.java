@@ -28,17 +28,17 @@ public class ConfigController {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
 		}
 	}
-
+	
 	@PatchMapping("/pause")
 	public void pause() {
 		marketSimulationService.pause();
 	}
-
+	
 	@PatchMapping("/resume")
 	public void resume() {
 		marketSimulationService.resume();
 	}
-
+	
 	@PatchMapping("/reset")
 	public void reset() {
 		marketSimulationService.reset();

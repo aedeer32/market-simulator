@@ -63,6 +63,37 @@ npm run dev
 
 ---
 
+## 🤖 CI
+
+GitHub Actions workflow is defined in `.github/workflows/ci.yml`.
+
+- Backend job: runs `./mvnw -B test spotless:check`
+- Frontend job: runs `npm ci` and `npm run build`
+- Triggered on `push` and `pull_request`
+
+---
+
+## 🐳 Docker
+
+This repository now includes:
+
+- Root `Dockerfile` for the Spring Boot backend
+- `frontend/Dockerfile` for the React app served by Nginx
+- `compose.yml` to run both containers together
+
+### Build and run with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- Frontend: `http://localhost:5173`
+- Backend API / WebSocket: `http://localhost:8080`
+
+The frontend container proxies `/api` and `/ws-market` to the backend container, so the browser only needs to talk to the frontend origin.
+
+---
+
 ## 🔁 Vite Proxy Configuration
 
 Make sure the following is included in `vite.config.ts` to forward WebSocket traffic:
